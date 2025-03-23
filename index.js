@@ -6,7 +6,7 @@ const port = 3000;
 const dotenv = require('dotenv');
 dotenv.config();
 app.use(express.urlencoded({ extended: true }));
-
+// phan thanh nam demo
 app.use(express.static('./views'));
 app.set('view engine', 'ejs');
 app.set('views', './views');
