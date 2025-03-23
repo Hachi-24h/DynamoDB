@@ -1,0 +1,51 @@
+body {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.content {
+    width: 80%; /* Tăng lên để bảng và nút có không gian */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* canh trái cho gọn */
+}
+
+.title {
+    width: 100%;
+    font-weight: bold;
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+
+.table-section {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 16px; /* khoảng cách giữa bảng và nút */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+}
+
+th {
+    background-color: gray;
+    color: white;
+}
+
+.buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}

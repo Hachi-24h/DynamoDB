@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/index.css" />
+  <title>Quản lý sản phẩm</title>
+  <style>
+    button { margin: 4px; }
+    .title { font-weight: bold; margin-top: 16px; }
+    .table-section {
+      display: flex;
+      flex-direction: row;
+      gap: 16px;
+      align-items: flex-start;
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
+
+    <!-- Form thêm sản phẩm -->
+    <form id="productForm" action="/add" method="POST">
+      <input type="text" name="ma_sp" id="ma_sp" placeholder="ID sản phẩm" required />
+      <input type="text" name="ten_sp" id="ten_sp" placeholder="Tên sản phẩm" required />
+      <input type="number" name="so_luong" id="so_luong" placeholder="Số lượng sản phẩm" required />
+      <button type="submit">Submit</button>
+    </form>
+
+    <div class="title">Danh sách sản phẩm</div>
+
+    <!-- Bảng và nút chức năng -->
+    <div class="table-section">
+      <form action="/delete" method="POST" onsubmit="return confirm('Bạn có chắc muốn xoá không?');" style="display: flex; gap: 16px;">
+        
+        <!-- Bảng bên trái -->
+        <table>
+          <tr>
+            <th>Mã SP</th>
+            <th>Tên SP</th>
+            <th>Số Lượng</th>
+            <th>Chọn</th>
+          </tr>
+          <% sanPhams.forEach(item => { %>
+            <tr>
+              <td><%= item.maSanPham %></td>
+              <td><%= item.ten_sp %></td>
+              <td><%= item.so_luong %></td>
+              <td>
+                <input type="checkbox" name="selected[]" value="<%= item.maSanPham %>" />
+              </td>
+            </tr>
+          <% }) %>
+        </table>
+
+        <!-- Nút bên phải -->
+        <div class="buttons">
+          <button type="submit">Delete</button>
+        </div>
+      </form>
+    </div>
+    
+  </div>
+</body>
+</html>
