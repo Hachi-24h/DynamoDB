@@ -1,84 +1,145 @@
 const express = require('express');
-const AWS = require('aws-sdk');
 const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+const { v4: uuid } = require('uuid');
+const dotenv = require('dotenv');
+const {
+  S3Client,
+  PutObjectCommand
+} = require('@aws-sdk/client-s3');
+const {
+  DynamoDBClient
+} = require('@aws-sdk/client-dynamodb');
+const {
+  DynamoDBDocumentClient,
+  ScanCommand,
+  PutCommand,
+  DeleteCommand
+} = require('@aws-sdk/lib-dynamodb');
+
+dotenv.config();
 const app = express();
 const port = 3000;
-const dotenv = require('dotenv');
-dotenv.config();
+
+// Middleware
 app.use(express.urlencoded({ extended: true }));
-// phan thanh nam demo
 app.use(express.static('./views'));
 app.set('view engine', 'ejs');
 app.set('views', './views');
 
-const config = new AWS.Config({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID ,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+// S3 config
+const s3 = new S3Client({
   region: 'ap-southeast-2',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
 });
-AWS.config = config;
 
-const docClient = new AWS.DynamoDB.DocumentClient();
+// DynamoDB config
+const ddb = new DynamoDBClient({
+  region: 'ap-southeast-2',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
+});
+const docClient = DynamoDBDocumentClient.from(ddb);
+
 const tableName = 'ThanhNamTable';
-const upload = multer();
 
-app.get('/', (req, res) => {
-  const params = { TableName: tableName };
-  docClient.scan(params, (err, data) => {
-    if (err) {
-      console.error("LỖI LẤY DỮ LIỆU:", err);
-      res.send('Internal Server Error');
+// Multer cấu hình lưu file tạm
+const upload = multer({
+  dest: 'uploads/',
+  fileFilter: function (req, file, cb) {
+    const fileTypes = /jpeg|jpg|png|gif/;
+    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = fileTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      cb(null, true);
     } else {
-      res.render('index', { sanPhams: data.Items });
+      cb(new Error('Chỉ cho phép upload ảnh'));
     }
-  });
+  }
 });
 
+// GET /
+app.get('/', async (req, res) => {
+  try {
+    const data = await docClient.send(new ScanCommand({ TableName: tableName }));
+    res.render('index', { sanPhams: data.Items });
+  } catch (err) {
+    console.error('LỖI LẤY DỮ LIỆU:', err);
+    res.send('Internal Server Error');
+  }
+});
 
-app.post('/add', upload.fields([]), (req, res) => {
+// POST /add
+app.post('/add', upload.single('image'), async (req, res) => {
   const { ma_sp, ten_sp, so_luong } = req.body;
+  let fileUrl = '';
+  let fileName = '';
 
-  const params = {
-    TableName: tableName,
-    Item: {
+  try {
+    if (req.file) {
+      const fileContent = fs.readFileSync(req.file.path);
+      const extension = path.extname(req.file.originalname);
+      const s3Key = `${uuid()}${extension}`;
+
+      const uploadParams = {
+        Bucket: 'nambk',
+        Key: s3Key,
+        Body: fileContent,
+        ContentType: req.file.mimetype
+      };
+
+      await s3.send(new PutObjectCommand(uploadParams));
+      fileUrl = `${process.env.CLOUD_FRONT_URL}/${s3Key}`;
+      fileName = req.file.originalname;
+      fs.unlinkSync(req.file.path); // Xóa file tạm
+    }
+
+    const item = {
       maSanPham: Number(ma_sp),
       ten_sp,
-      so_luong: Number(so_luong)
-    }
-  };
+      so_luong: Number(so_luong),
+      file: fileUrl,
+      fileName: fileName
+    };
 
-  docClient.put(params, (err, data) => {
-    if (err) {
-      console.error("LỖI THÊM:", err);
-      return res.send('Internal Server Error');
-    } else {
-      return res.redirect('/');
-    }
-  });
+    await docClient.send(new PutCommand({
+      TableName: tableName,
+      Item: item
+    }));
+
+    res.redirect('/');
+  } catch (err) {
+    console.error('LỖI THÊM:', err);
+    res.send('Lỗi upload hoặc lưu dữ liệu!');
+  }
 });
 
-// Xoá sản phẩm
-app.post('/delete', upload.fields([]), (req, res) => {
+// POST /delete
+app.post('/delete', upload.none(), async (req, res) => {
   const selected = req.body.selected;
   if (!selected) return res.redirect('/');
   const ids = Array.isArray(selected) ? selected : [selected];
 
-  const deletePromises = ids.map(id => {
-    const params = {
-      TableName: tableName,
-      Key: { maSanPham: Number(id) }
-    };
-    return docClient.delete(params).promise();
-  });
-
-  Promise.all(deletePromises)
-    .then(() => res.redirect('/'))
-    .catch(err => {
-      console.error("LỖI XÓA:", err);
-      res.send('Internal Server Error');
-    });
+  try {
+    for (let id of ids) {
+      await docClient.send(new DeleteCommand({
+        TableName: tableName,
+        Key: { maSanPham: Number(id) }
+      }));
+    }
+    res.redirect('/');
+  } catch (err) {
+    console.error("LỖI XÓA:", err);
+    res.send('Internal Server Error');
+  }
 });
 
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+  console.log(`✅ Server running at http://localhost:${port}`);
 });

@@ -20,10 +20,11 @@
   <div class="content">
 
     <!-- Form thêm sản phẩm -->
-    <form id="productForm" action="/add" method="POST">
-      <input type="text" name="ma_sp" id="ma_sp" placeholder="ID sản phẩm" required />
-      <input type="text" name="ten_sp" id="ten_sp" placeholder="Tên sản phẩm" required />
-      <input type="number" name="so_luong" id="so_luong" placeholder="Số lượng sản phẩm" required />
+    <form id="productForm" action="/add" method="POST" enctype="multipart/form-data">
+      <input type="text" name="ma_sp" placeholder="ID sản phẩm" required />
+      <input type="text" name="ten_sp" placeholder="Tên sản phẩm" required />
+      <input type="number" name="so_luong" placeholder="Số lượng sản phẩm" required />
+      <input type="file" name="image" accept="image/*" />
       <button type="submit">Submit</button>
     </form>
 
@@ -32,13 +33,12 @@
     <!-- Bảng và nút chức năng -->
     <div class="table-section">
       <form action="/delete" method="POST" onsubmit="return confirm('Bạn có chắc muốn xoá không?');" style="display: flex; gap: 16px;">
-        
-        <!-- Bảng bên trái -->
-        <table>
+        <table border="1" cellpadding="8">
           <tr>
             <th>Mã SP</th>
             <th>Tên SP</th>
             <th>Số Lượng</th>
+            <th>Ảnh</th>
             <th>Chọn</th>
           </tr>
           <% sanPhams.forEach(item => { %>
@@ -47,13 +47,19 @@
               <td><%= item.ten_sp %></td>
               <td><%= item.so_luong %></td>
               <td>
+                <% if (item.file) { %>
+                  <img src="<%= item.file %>" alt="Image" width="50" height="50" />
+                <% } else { %>
+                  Không có
+                <% } %>
+              </td>
+              <td>
                 <input type="checkbox" name="selected[]" value="<%= item.maSanPham %>" />
               </td>
             </tr>
           <% }) %>
         </table>
 
-        <!-- Nút bên phải -->
         <div class="buttons">
           <button type="submit">Delete</button>
         </div>
